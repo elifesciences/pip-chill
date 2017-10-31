@@ -3,10 +3,12 @@
 
 
 class Distribution:
-    def __init__(self, name, version=None, required_by=None):
+    def __init__(self, name, version=None, required_by=None, editable=False, vcs=None):
         self.name = name
         self.version = version
         self.required_by = set(required_by) if required_by else set()
+        self.editable = editable
+        self.vcs = vcs
 
     def get_name_without_version(self):
         if self.required_by:
@@ -18,6 +20,10 @@ class Distribution:
         if self.required_by:
             return '# {}=={} # Installed as dependency for {}' \
                 .format(self.name, self.version, ', '.join(self.required_by))
+        if self.vcs:
+            if self.editable:
+                return "-e {}".format(self.vcs)
+            return "{}".format(self.vcs)
         return '{}=={}'.format(self.name, self.version)
 
     def __cmp__(self, other):

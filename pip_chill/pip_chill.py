@@ -3,8 +3,10 @@
 
 import pip
 
-from utils import Distribution
-
+from .utils import Distribution
+from pip.utils import dist_is_editable
+from pip.vcs import vcs, get_src_requirement
+import os
 
 def chill(show_all=False):
     if show_all:
@@ -21,11 +23,19 @@ def chill(show_all=False):
         if distribution.key in ignored_packages:
             continue
 
+        editable = False
+        vcs_loc = None
+
         if distribution.key in dependencies:
             dependencies[distribution.key].version = distribution.version
         else:
+            location = os.path.normcase(os.path.abspath(distribution.location))
+            if dist_is_editable(distribution) and vcs.get_backend_name(location):
+                vcs_loc = get_src_requirement(distribution, location)
+                editable = True
+
             distributions[distribution.key] = \
-                Distribution(distribution.key, distribution.version)
+                Distribution(distribution.key, distribution.version, editable=editable, vcs=vcs_loc)
 
         for requirement in distribution.requires():
             if requirement.key not in ignored_packages:
@@ -35,7 +45,10 @@ def chill(show_all=False):
                 else:
                     dependencies[requirement.key] = Distribution(
                         requirement.key,
-                        required_by=(distribution.key,))
+                        required_by=(distribution.key,),
+                        editable=editable, 
+                        vcs=vcs_loc
+                    )
 
             if requirement.key in distributions:
                 dependencies[requirement.key].version \
